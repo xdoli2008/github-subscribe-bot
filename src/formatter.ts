@@ -12,7 +12,7 @@ function formatOneRelease(release: CategorizedRelease): string {
   const tag = escapeHtml(release.tag);
 
   lines.push(
-    `📅 ${release.date}  <a href="${release.url}">${tag}</a>`,
+    `${release.date}  <a href="${release.url}">${tag}</a>`,
   );
 
   for (const cat of release.categories) {
@@ -33,7 +33,7 @@ export function formatMessage(
 ): string {
   const parts: string[] = [];
 
-  parts.push(`📦 <b>${escapeHtml(repo)}</b>`);
+  parts.push(`<b>${escapeHtml(repo)}</b>`);
 
   for (let i = 0; i < releases.length; i++) {
     if (i > 0) parts.push('\n┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄');
@@ -54,7 +54,7 @@ export function splitMessages(
   if (full.length <= TG_MAX_LENGTH) return [full];
 
   const messages: string[] = [];
-  const header = `📦 <b>${escapeHtml(repo)}</b>`;
+  const header = `<b>${escapeHtml(repo)}</b>`;
 
   for (const release of releases) {
     const body = formatOneRelease(release);

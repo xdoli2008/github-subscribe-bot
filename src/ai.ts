@@ -14,6 +14,14 @@ const VALID_TYPES = new Set<CategoryType>([
   'feat', 'fix', 'perf', 'refactor', 'docs', 'other',
 ]);
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const offset = d.getTime() + 8 * 3600_000;
+  const cn = new Date(offset);
+  return `${cn.getUTCFullYear()}-${pad(cn.getUTCMonth() + 1)}-${pad(cn.getUTCDate())} ${pad(cn.getUTCHours())}:${pad(cn.getUTCMinutes())}:${pad(cn.getUTCSeconds())}`;
+}
+
 const SYSTEM_PROMPT = `You are a GitHub Release Notes translator and categorizer.
 Given release notes in any language, you MUST:
 1. Translate all content to Chinese (简体中文)
@@ -55,7 +63,7 @@ export async function categorizeRelease(
 ): Promise<CategorizedRelease> {
   const base: CategorizedRelease = {
     tag: release.tag_name,
-    date: release.published_at.slice(0, 10),
+    date: formatDate(release.published_at),
     url: release.html_url,
     categories: [],
   };
