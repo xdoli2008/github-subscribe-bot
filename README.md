@@ -32,7 +32,8 @@ cp .env.example .env
 # 编辑 .env 填入你的配置（见下方配置说明）
 
 # 配置订阅仓库
-# 编辑 subscribe.json（见下方订阅配置）
+cp subscribe.example.json subscribe.json
+# 编辑 subscribe.json 添加你要订阅的仓库（见下方订阅配置）
 
 # 启动
 docker compose up -d --build
@@ -86,7 +87,13 @@ CHECK_INTERVAL=900
 
 ## 订阅仓库
 
-编辑项目根目录的 `subscribe.json`，添加要订阅的 GitHub 仓库（`owner/repo` 格式）：
+从示例文件创建订阅配置：
+
+```bash
+cp subscribe.example.json subscribe.json
+```
+
+编辑 `subscribe.json`，添加要订阅的 GitHub 仓库（`owner/repo` 格式）：
 
 ```json
 {
@@ -97,6 +104,8 @@ CHECK_INTERVAL=900
   ]
 }
 ```
+
+> `subscribe.json` 已被 `.gitignore` 忽略，不会被 Git 跟踪，可随时修改。
 
 修改后重启容器生效：
 
@@ -109,9 +118,9 @@ docker compose restart
 Bot 推送的 Telegram 消息示例：
 
 ```
-📦 vuejs/core
+vuejs/core
 
-📅 2025-02-19  v3.5.0
+2025-02-19 14:30:00  v3.5.0
 
 ✨ 新功能
 • 新增 useTemplateRef API
@@ -135,6 +144,9 @@ npm install
 # 配置环境变量
 cp .env.example .env
 
+# 配置订阅仓库
+cp subscribe.example.json subscribe.json
+
 # 开发模式（文件变更自动重启）
 npm run dev
 
@@ -156,7 +168,7 @@ npm run build
 │   ├── ai.ts          # AI 翻译与分类
 │   ├── formatter.ts   # Telegram 消息格式化
 │   └── telegram.ts    # Telegram 消息发送（含重试）
-├── subscribe.json     # 订阅仓库列表
+├── subscribe.example.json  # 订阅仓库列表（示例）
 ├── data/              # 运行时状态（自动生成）
 ├── Dockerfile
 ├── docker-compose.yml

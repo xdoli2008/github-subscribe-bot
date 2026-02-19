@@ -16,7 +16,6 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY subscribe.json ./
 COPY --from=builder /app/dist ./dist
 
 VOLUME /app/data
