@@ -54,11 +54,14 @@ export const CATEGORY_META: Record<
   other: { emoji: '📌', label: '其他' },
 };
 
+export type AIProvider = 'openai-completions' | 'openai-responses' | 'google' | 'anthropic';
+
 export interface AppConfig {
   githubToken: string;
   telegramBotToken: string;
   telegramChatId: string;
-  aiBaseUrl: string;
+  aiProvider: AIProvider;
+  aiBaseUrl?: string;
   aiApiKey: string;
   aiModel: string;
   checkInterval: number;

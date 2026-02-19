@@ -1,5 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { generateText, type LanguageModel } from 'ai';
 import type {
   AppConfig,
   GitHubRelease,
@@ -28,16 +30,27 @@ Rules:
 - Skip CI/build/dependency-only changes unless significant
 - If input is empty or meaningless, return {"categories":[]}`;
 
-export function createAIClient(config: AppConfig) {
-  const provider = createOpenAI({
-    baseURL: config.aiBaseUrl,
+export function createAIClient(config: AppConfig): LanguageModel {
+  const opts = {
+    ...(config.aiBaseUrl && { baseURL: config.aiBaseUrl }),
     apiKey: config.aiApiKey,
-  });
-  return provider(config.aiModel);
+  };
+
+  switch (config.aiProvider) {
+    case 'google':
+      return createGoogleGenerativeAI(opts)(config.aiModel);
+    case 'anthropic':
+      return createAnthropic(opts)(config.aiModel);
+    case 'openai-responses':
+      return createOpenAI(opts).responses(config.aiModel);
+    default:
+      // .chat() ensures /v1/chat/completions format (compatible with proxies)
+      return createOpenAI(opts).chat(config.aiModel);
+  }
 }
 
 export async function categorizeRelease(
-  model: ReturnType<typeof createAIClient>,
+  model: LanguageModel,
   release: GitHubRelease,
 ): Promise<CategorizedRelease> {
   const base: CategorizedRelease = {
