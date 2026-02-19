@@ -4,6 +4,7 @@
   "description": "Subscribe to GitHub releases and notify via Telegram",
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts"
   },
