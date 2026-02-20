@@ -38,12 +38,15 @@ No server required. Fork and configure:
    - `AI_API_KEY` — AI service API Key
 4. Add **Variables** (plaintext):
    - `SUBSCRIBE_REPOS` — Comma-separated repos, e.g. `vuejs/core,nodejs/node`
+   - `AI_PROVIDER` — (Optional) AI provider, default `openai-completions`
+   - `AI_MODEL` — (Optional) Model name, default `gpt-4o-mini`
+   - `AI_BASE_URL` — (Optional) Custom API URL for proxy/self-hosted
+   - `TIMEZONE` — (Optional) IANA timezone, default `Asia/Shanghai`
+   - `TARGET_LANG` — (Optional) Translation target language, default `English`
 5. Go to **Actions** tab → Enable workflows
 6. Optionally trigger **Release Check** manually to test
 
-> GitHub Actions provides a built-in `GITHUB_TOKEN` automatically (1000 req/hr). No need to configure it.
->
-> Other optional variables: `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`, `TIMEZONE`, `TARGET_LANG`. See [Configuration](#configuration) for defaults.
+> GitHub Actions provides a built-in `GITHUB_TOKEN` automatically (1000 req/hr). No need to configure it separately.
 
 ### Option 2: Docker Compose
 

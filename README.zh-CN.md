@@ -38,12 +38,15 @@
    - `AI_API_KEY` — AI 服务 API Key
 4. 添加 **Variables**（明文）：
    - `SUBSCRIBE_REPOS` — 逗号分隔的仓库列表，如 `vuejs/core,nodejs/node`
+   - `AI_PROVIDER` —（可选）AI 提供商，默认 `openai-completions`
+   - `AI_MODEL` —（可选）模型名称，默认 `gpt-4o-mini`
+   - `AI_BASE_URL` —（可选）自定义 API 地址（代理/自部署）
+   - `TIMEZONE` —（可选）IANA 时区，默认 `Asia/Shanghai`
+   - `TARGET_LANG` —（可选）翻译目标语言，默认 `English`
 5. 进入 **Actions** 页面 → 启用 workflows
 6. 可手动触发 **Release Check** 测试
 
 > GitHub Actions 自动提供内置 `GITHUB_TOKEN`（1000 次/小时），无需额外配置。
->
-> 其他可选变量：`AI_PROVIDER`、`AI_MODEL`、`AI_BASE_URL`、`TIMEZONE`、`TARGET_LANG`。默认值见[配置说明](#配置说明)。
 
 ### 方式二：Docker Compose
 

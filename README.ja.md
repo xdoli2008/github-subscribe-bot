@@ -38,12 +38,15 @@ GitHub リポジトリの Release を購読し、AI で自動的に変更履歴�
    - `AI_API_KEY` — AI サービス API Key
 4. **Variables**（平文）を追加：
    - `SUBSCRIBE_REPOS` — カンマ区切りのリポジトリ、例：`vuejs/core,nodejs/node`
+   - `AI_PROVIDER` —（任意）AI プロバイダー、デフォルト `openai-completions`
+   - `AI_MODEL` —（任意）モデル名、デフォルト `gpt-4o-mini`
+   - `AI_BASE_URL` —（任意）カスタム API URL（プロキシ/セルフホスト）
+   - `TIMEZONE` —（任意）IANA タイムゾーン、デフォルト `Asia/Shanghai`
+   - `TARGET_LANG` —（任意）翻訳対象言語、デフォルト `English`
 5. **Actions** タブ → ワークフローを有効化
 6. 必要に応じて **Release Check** を手動トリガーしてテスト
 
 > GitHub Actions は内蔵 `GITHUB_TOKEN` を自動提供（1000 リクエスト/時）。追加設定は不要です。
->
-> その他のオプション変数：`AI_PROVIDER`、`AI_MODEL`、`AI_BASE_URL`、`TIMEZONE`、`TARGET_LANG`。デフォルト値は[設定](#設定)を参照。
 
 ### 方法 2：Docker Compose
 
