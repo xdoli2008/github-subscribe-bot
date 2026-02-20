@@ -41,7 +41,7 @@ export function loadConfig(): AppConfig {
   }
 
   return {
-    githubToken: requiredEnv('GITHUB_TOKEN'),
+    githubToken: process.env.GITHUB_TOKEN || undefined,
     telegramBotToken: requiredEnv('TELEGRAM_BOT_TOKEN'),
     telegramChatId: requiredEnv('TELEGRAM_CHAT_ID'),
     aiProvider: provider,

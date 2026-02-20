@@ -14,6 +14,12 @@ const config = loadConfig();
 const model = createAIClient(config);
 let running = true;
 
+if (!config.githubToken) {
+  console.info(
+    '[Tip] GITHUB_TOKEN not set. Using unauthenticated GitHub API (60 req/hr). Set token for higher rate limits (5000 req/hr).',
+  );
+}
+
 async function processRepo(
   repo: string,
   state: AppState,

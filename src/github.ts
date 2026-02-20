@@ -24,15 +24,18 @@ export function saveState(state: AppState): void {
 
 export async function checkRepo(
   repo: string,
-  token: string,
+  token: string | undefined,
   state: AppState,
 ): Promise<CheckResult> {
   const repoState = state[repo];
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
-    Authorization: `Bearer ${token}`,
     'X-GitHub-Api-Version': '2022-11-28',
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   if (repoState?.etag) {
     headers['If-None-Match'] = repoState.etag;

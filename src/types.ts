@@ -77,7 +77,7 @@ export function getCategoryMeta(
 export type AIProvider = 'openai-completions' | 'openai-responses' | 'google' | 'anthropic';
 
 export interface AppConfig {
-  githubToken: string;
+  githubToken?: string;
   telegramBotToken: string;
   telegramChatId: string;
   aiProvider: AIProvider;
