@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { CronJob } from 'cron';
 import { loadConfig, loadSubscriptions } from './config.js';
 import { loadState, saveState, checkRepo } from './github.js';
 import { createAIClient, categorizeRelease } from './ai.js';
@@ -8,15 +7,15 @@ import { sendMessage } from './telegram.js';
 import { setupLogging } from './logger.js';
 import type { AppState, CategorizedRelease } from './types.js';
 
+// Single-run entry point for GitHub Actions (no cron loop)
 setupLogging();
 
 const config = loadConfig();
 const model = createAIClient(config);
-let running = true;
 
 if (!config.githubToken) {
   console.info(
-    '[Tip] GITHUB_TOKEN not set. Using unauthenticated GitHub API (60 req/hr). Set token for higher rate limits (5000 req/hr).',
+    '[Tip] GITHUB_TOKEN not set. Using unauthenticated GitHub API (60 req/hr).',
   );
 }
 
@@ -45,7 +44,9 @@ async function processRepo(
 
   const categorized: CategorizedRelease[] = [];
   for (const release of result.newReleases) {
-    categorized.push(await categorizeRelease(model, release, config.timezone, config.targetLang));
+    categorized.push(
+      await categorizeRelease(model, release, config.timezone, config.targetLang),
+    );
   }
 
   const messages = splitMessages(repo, categorized, config.targetLang);
@@ -70,7 +71,7 @@ async function processRepo(
   console.log(`[${repo}] Notified, latest: ${state[repo].lastRelease}`);
 }
 
-async function runCheck(): Promise<void> {
+async function run(): Promise<void> {
   const repos = loadSubscriptions();
   console.log(
     `[Check] ${new Date().toISOString()} — ${repos.length} repo(s)`,
@@ -78,14 +79,11 @@ async function runCheck(): Promise<void> {
 
   const start = Date.now();
   const state = loadState();
-  let updated = 0;
   let failed = 0;
 
   for (const repo of repos) {
-    if (!running) break;
     try {
       await processRepo(repo, state);
-      if (state[repo]?.lastCheck === new Date().toISOString()) updated++;
     } catch (e) {
       console.error(`[${repo}] Unexpected error:`, e);
       failed++;
@@ -96,37 +94,10 @@ async function runCheck(): Promise<void> {
   console.log(
     `[Check] Done in ${Date.now() - start}ms. Repos: ${repos.length}, failed: ${failed}`,
   );
-}
 
-async function main(): Promise<void> {
-  if (!config.cron) {
-    throw new Error('Missing required env: CRON. Required for daemon mode.');
+  if (failed > 0) {
+    process.exit(1);
   }
-
-  console.log(
-    `Started. Provider: ${config.aiProvider}, Model: ${config.aiModel}, Lang: ${config.targetLang}, Timezone: ${config.timezone}, Cron: ${config.cron}`,
-  );
-
-  await runCheck();
-
-  const job = CronJob.from({
-    cronTime: config.cron,
-    timeZone: config.timezone,
-    start: true,
-    onTick: async () => {
-      if (!running) return;
-      await runCheck();
-    },
-  });
-
-  const shutdown = () => {
-    console.log('\nShutting down...');
-    running = false;
-    job.stop();
-  };
-
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
 }
 
-main();
+run();

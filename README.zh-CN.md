@@ -15,18 +15,37 @@
 - 翻译目标语言可配置（默认英文）
 - Telegram 消息自动分割（超过 4096 字符时拆分发送）
 - 发送失败自动重试（最多 3 次）
-- Docker 一键部署
+- 支持 Docker Compose 或 GitHub Actions 部署（无需服务器）
 
 ## 快速开始
 
 ### 前置准备
 
-1. **GitHub Token**（可选）— [创建 Personal Access Token](https://github.com/settings/tokens)，可提高 API 频率限制。订阅仓库多或轮询频率高时建议配置
-2. **Telegram Bot** — 通过 [@BotFather](https://t.me/BotFather) 创建 Bot，获取 Token
-3. **Telegram Chat ID** — 频道用户名（如 `@my_channel`）或群组/个人数字 ID
-4. **AI API Key** — 任选一个 AI 提供商的 API Key
+1. **Telegram Bot** — 通过 [@BotFather](https://t.me/BotFather) 创建 Bot，获取 Token
+2. **Telegram Chat ID** — 频道用户名（如 `@my_channel`）或群组/个人数字 ID
+3. **AI API Key** — 任选一个 AI 提供商的 API Key
+4. **GitHub Token**（可选）— [创建 Personal Access Token](https://github.com/settings/tokens)，可提高 API 频率限制。订阅仓库多或轮询频率高时建议配置
 
-### Docker Compose 部署（推荐）
+### 方式一：GitHub Actions（推荐）
+
+无需服务器，Fork 后配置即可：
+
+1. Fork 本仓库
+2. 进入 **Settings → Secrets and variables → Actions**
+3. 添加 **Secrets**（加密）：
+   - `TELEGRAM_BOT_TOKEN` — Telegram Bot Token
+   - `TELEGRAM_CHAT_ID` — 目标频道/群组 ID
+   - `AI_API_KEY` — AI 服务 API Key
+4. 添加 **Variables**（明文）：
+   - `SUBSCRIBE_REPOS` — 逗号分隔的仓库列表，如 `vuejs/core,nodejs/node`
+5. 进入 **Actions** 页面 → 启用 workflows
+6. 可手动触发 **Release Check** 测试
+
+> GitHub Actions 自动提供内置 `GITHUB_TOKEN`（1000 次/小时），无需额外配置。
+>
+> 其他可选变量：`AI_PROVIDER`、`AI_MODEL`、`AI_BASE_URL`、`TIMEZONE`、`TARGET_LANG`。默认值见[配置说明](#配置说明)。
+
+### 方式二：Docker Compose
 
 ```bash
 git clone https://github.com/nicepkg/github-subscribe-bot.git
@@ -34,9 +53,6 @@ cd github-subscribe-bot
 
 cp .env.example .env
 # 编辑 .env 填入你的配置（见下方配置说明）
-
-cp subscribe.example.json subscribe.json
-# 编辑 subscribe.json 添加你要订阅的仓库（见下方订阅配置）
 
 docker compose up -d --build
 
@@ -53,15 +69,16 @@ docker compose down
 
 | 变量                 | 必填 | 默认值               | 说明                                             |
 | -------------------- | ---- | -------------------- | ------------------------------------------------ |
-| `GITHUB_TOKEN`       | ❌   | —                    | GitHub Personal Access Token（可选，仓库多或轮询频率高时建议配置） |
+| `SUBSCRIBE_REPOS`    | ✅   | —                    | 逗号分隔的订阅仓库列表（如 `vuejs/core,nodejs/node`） |
 | `TELEGRAM_BOT_TOKEN` | ✅   | —                    | Telegram Bot Token                               |
 | `TELEGRAM_CHAT_ID`   | ✅   | —                    | 目标频道/群组/用户 ID                            |
+| `AI_API_KEY`         | ✅   | —                    | AI 服务 API Key                                  |
+| `AI_MODEL`           | ❌   | `gpt-4o-mini`        | 模型名称                                         |
 | `AI_PROVIDER`        | ❌   | `openai-completions` | AI 提供商（见下方）                              |
 | `AI_BASE_URL`        | ❌   | 各 SDK 默认值        | 自定义 API 地址（代理/自部署）                   |
-| `AI_API_KEY`         | ✅   | —                    | AI 服务 API Key                                  |
-| `AI_MODEL`           | ✅   | —                    | 模型名称                                         |
+| `GITHUB_TOKEN`       | ❌   | —                    | GitHub PAT，提高 API 频率限制（5000 次/小时 vs 60 次/小时） |
 | `TIMEZONE`           | ❌   | `Asia/Shanghai`      | 全局时区（IANA），用于 cron 调度和消息时间格式化 |
-| `CRON`               | ✅   | —                    | Cron 表达式（6 字段，含秒）                      |
+| `CRON`               | ❌   | —                    | Cron 表达式（6 字段，含秒）。Docker/本地模式必填 |
 | `TARGET_LANG`        | ❌   | `English`            | AI 翻译目标语言                                  |
 
 > `TARGET_LANG` 同时控制 AI 翻译输出和分类标签（如 ✨ 新功能）。内置标签翻译支持`English`、`Chinese`和`Japanese`，其他语言将使用英文标签配合 AI 翻译内容。
@@ -98,7 +115,7 @@ TARGET_LANG=Chinese
 
 ### 定时调度（Cron）
 
-程序使用 `CRON` 调度（基于 `cron` 包）：
+Docker/本地模式下，程序使用 `CRON` 进行内部调度（基于 `cron` 包）：
 
 ```env
 TIMEZONE=Asia/Shanghai
@@ -113,24 +130,18 @@ CRON=0 */10 9-23 * * *
 - 每天 08:30：`0 30 8 * * *`
 
 > `CRON` 使用 6 字段格式（秒 分 时 日 月 周），例如 `0 */10 9-23 * * *`。
+> GitHub Actions 模式下，调度由 workflow cron 触发器处理，无需配置 `CRON`。
 
 ## 订阅仓库
 
-从示例文件创建订阅配置：
+通过 `SUBSCRIBE_REPOS` 环境变量设置订阅的 GitHub 仓库（`owner/repo` 格式，逗号分隔）：
 
-```bash
-cp subscribe.example.json subscribe.json
+```env
+SUBSCRIBE_REPOS=vuejs/core,nodejs/node,microsoft/vscode
 ```
 
-编辑 `subscribe.json`，添加要订阅的 GitHub 仓库（`owner/repo` 格式）：
-
-```json
-{
-  "repos": ["vuejs/core", "nodejs/node", "microsoft/vscode"]
-}
-```
-
-> `subscribe.json` 已被 `.gitignore` 忽略，不会被 Git 跟踪，可随时修改。
+GitHub Actions 模式下，在仓库 Settings 中设置为 **Variable**。
+Docker/本地模式下，添加到 `.env` 文件中。
 
 修改后重启容器生效：
 
@@ -165,11 +176,11 @@ AI 会将英文 Release Notes 自动翻译为配置的目标语言，并按类�
 ```bash
 npm install
 cp .env.example .env
-cp subscribe.example.json subscribe.json
-# 编辑 .env 填入你的配置
+# 编辑 .env 填入你的 Token 和 SUBSCRIBE_REPOS
 
 npm run dev    # 开发模式（文件变更自动重启）
-npm start      # 直接运行
+npm start      # 直接运行（守护进程，内部 cron 调度）
+npm run check  # 单次运行后退出（GitHub Actions 使用）
 npm run build  # 编译 TypeScript
 ```
 
@@ -177,7 +188,8 @@ npm run build  # 编译 TypeScript
 
 ```
 ├── src/
-│   ├── index.ts       # 入口，主循环与调度
+│   ├── index.ts       # 入口，守护进程与内部 cron 调度
+│   ├── action.ts      # 单次运行入口（GitHub Actions 用）
 │   ├── config.ts      # 环境变量加载与校验
 │   ├── types.ts       # 类型定义
 │   ├── github.ts      # GitHub API 交互与状态管理
@@ -185,7 +197,6 @@ npm run build  # 编译 TypeScript
 │   ├── formatter.ts   # Telegram 消息格式化
 │   ├── telegram.ts    # Telegram 消息发送（含重试）
 │   └── logger.ts      # 日志工具
-├── subscribe.example.json
 ├── data/              # 运行时状态（自动生成）
 ├── Dockerfile
 ├── docker-compose.yml

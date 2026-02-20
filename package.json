@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "check": "tsx src/action.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.45",

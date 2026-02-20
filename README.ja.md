@@ -15,18 +15,37 @@ GitHub リポジトリの Release を購読し、AI で自動的に変更履歴�
 - 翻訳先言語を設定可能（デフォルト：英語）
 - Telegram メッセージの自動分割（4096 文字超過時）
 - 送信失敗時の自動リトライ（最大 3 回）
-- Docker でワンクリックデプロイ
+- Docker Compose または GitHub Actions でデプロイ（サーバー不要）
 
 ## クイックスタート
 
 ### 前提条件
 
-1. **GitHub Token**（任意）— [Personal Access Token を作成](https://github.com/settings/tokens)。API レート制限を引き上げます。多数のリポジトリを購読する場合や高頻度ポーリング時に推奨
-2. **Telegram Bot** — [@BotFather](https://t.me/BotFather) で Bot を作成し Token を取得
-3. **Telegram Chat ID** — チャンネルユーザー名（例：`@my_channel`）またはグループ/ユーザーの数値 ID
-4. **AI API Key** — 対応する AI プロバイダーの API Key
+1. **Telegram Bot** — [@BotFather](https://t.me/BotFather) で Bot を作成し Token を取得
+2. **Telegram Chat ID** — チャンネルユーザー名（例：`@my_channel`）またはグループ/ユーザーの数値 ID
+3. **AI API Key** — 対応する AI プロバイダーの API Key
+4. **GitHub Token**（任意）— [Personal Access Token を作成](https://github.com/settings/tokens)。API レート制限を引き上げます。多数のリポジトリを購読する場合や高頻度ポーリング時に推奨
 
-### Docker Compose（推奨）
+### 方法 1：GitHub Actions（推奨）
+
+サーバー不要。Fork して設定するだけ：
+
+1. このリポジトリを Fork
+2. **Settings → Secrets and variables → Actions** に移動
+3. **Secrets**（暗号化）を追加：
+   - `TELEGRAM_BOT_TOKEN` — Telegram Bot Token
+   - `TELEGRAM_CHAT_ID` — 配信先チャンネル/グループ ID
+   - `AI_API_KEY` — AI サービス API Key
+4. **Variables**（平文）を追加：
+   - `SUBSCRIBE_REPOS` — カンマ区切りのリポジトリ、例：`vuejs/core,nodejs/node`
+5. **Actions** タブ → ワークフローを有効化
+6. 必要に応じて **Release Check** を手動トリガーしてテスト
+
+> GitHub Actions は内蔵 `GITHUB_TOKEN` を自動提供（1000 リクエスト/時）。追加設定は不要です。
+>
+> その他のオプション変数：`AI_PROVIDER`、`AI_MODEL`、`AI_BASE_URL`、`TIMEZONE`、`TARGET_LANG`。デフォルト値は[設定](#設定)を参照。
+
+### 方法 2：Docker Compose
 
 ```bash
 git clone https://github.com/nicepkg/github-subscribe-bot.git
@@ -34,9 +53,6 @@ cd github-subscribe-bot
 
 cp .env.example .env
 # .env を編集して設定を入力（下記参照）
-
-cp subscribe.example.json subscribe.json
-# subscribe.json を編集して購読するリポジトリを追加（下記参照）
 
 docker compose up -d --build
 
@@ -53,15 +69,16 @@ docker compose down
 
 | 変数 | 必須 | デフォルト | 説明 |
 |------|------|-----------|------|
-| `GITHUB_TOKEN` | ❌ | — | GitHub Personal Access Token（任意、多数リポジトリや高頻度ポーリング時に推奨） |
+| `SUBSCRIBE_REPOS` | ✅ | — | カンマ区切りの購読リポジトリ（例：`vuejs/core,nodejs/node`） |
 | `TELEGRAM_BOT_TOKEN` | ✅ | — | Telegram Bot Token |
 | `TELEGRAM_CHAT_ID` | ✅ | — | 配信先チャンネル/グループ/ユーザー ID |
+| `AI_API_KEY` | ✅ | — | AI サービス API Key |
+| `AI_MODEL` | ❌ | `gpt-4o-mini` | モデル名 |
 | `AI_PROVIDER` | ❌ | `openai-completions` | AI プロバイダー（下記参照） |
 | `AI_BASE_URL` | ❌ | SDK デフォルト | カスタム API URL（プロキシ/セルフホスト） |
-| `AI_API_KEY` | ✅ | — | AI サービス API Key |
-| `AI_MODEL` | ✅ | — | モデル名 |
+| `GITHUB_TOKEN` | ❌ | — | GitHub PAT（5000 リクエスト/時 vs 60 リクエスト/時） |
 | `TIMEZONE` | ❌ | `Asia/Shanghai` | IANA タイムゾーン（cron とメッセージ時刻に使用） |
-| `CRON` | ✅ | — | Cron 式（6 フィールド、秒を含む） |
+| `CRON` | ❌ | — | Cron 式（6 フィールド、秒を含む）。Docker/ローカルモードで必須 |
 | `TARGET_LANG` | ❌ | `English` | AI 翻訳の対象言語 |
 
 > `TARGET_LANG` は AI 翻訳出力とカテゴリラベル（例：✨ 新機能）の両方を制御します。`English`、`Chinese`、`Japanese`のラベル翻訳が組み込まれています。その他の言語では英語ラベルと AI 翻訳コンテンツが使用されます。
@@ -94,11 +111,12 @@ AI_MODEL=gpt-4o-mini
 TIMEZONE=Asia/Shanghai
 CRON=0 */10 9-23 * * *
 TARGET_LANG=Japanese
+SUBSCRIBE_REPOS=vuejs/core,nodejs/node
 ```
 
 ### スケジューリング（Cron）
 
-`CRON` でスケジュールを設定します（`cron` パッケージ使用）：
+Docker/ローカルモードでは、`CRON` で内部スケジューリングを行います（`cron` パッケージ使用）：
 
 ```env
 TIMEZONE=Asia/Shanghai
@@ -112,28 +130,18 @@ CRON=0 */10 9-23 * * *
 - 毎日 08:30：`0 30 8 * * *`
 
 > `CRON` は 6 フィールド形式（秒 分 時 日 月 曜日）を使用します。例：`0 */10 9-23 * * *`
+> GitHub Actions モードでは、ワークフローの cron トリガーがスケジューリングを処理するため、`CRON` の設定は不要です。
 
 ## 購読設定
 
-サンプルファイルから購読設定を作成：
+`SUBSCRIBE_REPOS` 環境変数でカンマ区切りの GitHub リポジトリを設定します（`owner/repo` 形式）：
 
-```bash
-cp subscribe.example.json subscribe.json
+```env
+SUBSCRIBE_REPOS=vuejs/core,nodejs/node,microsoft/vscode
 ```
 
-`subscribe.json` を編集し、購読する GitHub リポジトリを追加（`owner/repo` 形式）：
-
-```json
-{
-  "repos": [
-    "vuejs/core",
-    "nodejs/node",
-    "microsoft/vscode"
-  ]
-}
-```
-
-> `subscribe.json` は `.gitignore` に含まれており、Git で追跡されません。自由に変更できます。
+GitHub Actions モードでは、リポジトリの Settings で **Variable** として設定します。
+Docker/ローカルモードでは、`.env` ファイルに追加します。
 
 変更後にコンテナを再起動：
 
@@ -168,11 +176,11 @@ AI が英語の Release Notes を設定された対象言語に自動翻訳し�
 ```bash
 npm install
 cp .env.example .env
-cp subscribe.example.json subscribe.json
-# .env にトークンを設定
+# .env にトークンと SUBSCRIBE_REPOS を設定
 
 npm run dev    # 開発モード（ファイル変更時に自動再起動）
-npm start      # 直接実行
+npm start      # 直接実行（デーモン、内部 cron スケジューリング）
+npm run check  # 単回実行して終了（GitHub Actions 用）
 npm run build  # TypeScript コンパイル
 ```
 
@@ -180,7 +188,8 @@ npm run build  # TypeScript コンパイル
 
 ```
 ├── src/
-│   ├── index.ts       # エントリーポイント、スケジューラー
+│   ├── index.ts       # エントリーポイント、デーモンと内部 cron
+│   ├── action.ts      # 単回実行エントリーポイント（GitHub Actions 用）
 │   ├── config.ts      # 環境変数の読み込み
 │   ├── types.ts       # 型定義
 │   ├── github.ts      # GitHub API クライアントと状態管理
@@ -188,7 +197,6 @@ npm run build  # TypeScript コンパイル
 │   ├── formatter.ts   # Telegram メッセージフォーマット
 │   ├── telegram.ts    # Telegram メッセージ送信（リトライ付き）
 │   └── logger.ts      # ロガーユーティリティ
-├── subscribe.example.json
 ├── data/              # ランタイム状態（自動生成）
 ├── Dockerfile
 ├── docker-compose.yml

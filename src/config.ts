@@ -1,9 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { validateCronExpression } from 'cron';
 import type { AIProvider, AppConfig } from './types.js';
-
-const ROOT = resolve(import.meta.dirname, '..');
 const VALID_PROVIDERS = new Set<AIProvider>(['openai-completions', 'openai-responses', 'google', 'anthropic']);
 
 function requiredEnv(key: string): string {
@@ -25,7 +21,7 @@ function validateTimezone(timezone: string): void {
 export function loadConfig(): AppConfig {
   const provider = (process.env.AI_PROVIDER || 'openai-completions') as AIProvider;
   const timezone = process.env.TIMEZONE || process.env.TZ || 'Asia/Shanghai';
-  const cron = requiredEnv('CRON');
+  const cron = process.env.CRON;
 
   if (!VALID_PROVIDERS.has(provider)) {
     throw new Error(
@@ -35,9 +31,11 @@ export function loadConfig(): AppConfig {
 
   validateTimezone(timezone);
 
-  const cronValidation = validateCronExpression(cron);
-  if (!cronValidation.valid) {
-    throw new Error(`Invalid CRON: ${cron}. ${cronValidation.error}`);
+  if (cron) {
+    const cronValidation = validateCronExpression(cron);
+    if (!cronValidation.valid) {
+      throw new Error(`Invalid CRON: ${cron}. ${cronValidation.error}`);
+    }
   }
 
   return {
@@ -55,8 +53,21 @@ export function loadConfig(): AppConfig {
 }
 
 export function loadSubscriptions(): string[] {
-  const filePath = resolve(ROOT, 'subscribe.json');
-  const raw = readFileSync(filePath, 'utf-8');
-  const data = JSON.parse(raw) as { repos: string[] };
-  return data.repos;
+  const envRepos = process.env.SUBSCRIBE_REPOS;
+  if (!envRepos) {
+    throw new Error(
+      'Missing required env: SUBSCRIBE_REPOS. Set comma-separated repos, e.g. SUBSCRIBE_REPOS=vuejs/core,nodejs/node',
+    );
+  }
+
+  const repos = envRepos
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+
+  if (repos.length === 0) {
+    throw new Error('SUBSCRIBE_REPOS is empty. Add at least one repo.');
+  }
+
+  return repos;
 }

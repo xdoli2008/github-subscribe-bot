@@ -15,18 +15,37 @@ Subscribe to GitHub repository releases, automatically translate and categorize 
 - Configurable target language for translation (default: English)
 - Auto-split Telegram messages (when exceeding 4096 characters)
 - Auto-retry on send failure (up to 3 times)
-- One-click Docker deployment
+- Deploy via Docker Compose or GitHub Actions (zero server needed)
 
 ## Quick Start
 
 ### Prerequisites
 
-1. **GitHub Token** (Optional) — [Create a Personal Access Token](https://github.com/settings/tokens) for higher API rate limits. Recommended if you subscribe to many repos or use frequent polling
-2. **Telegram Bot** — Create via [@BotFather](https://t.me/BotFather) to get the Bot Token
-3. **Telegram Chat ID** — Channel username (e.g. `@my_channel`) or group/user numeric ID
-4. **AI API Key** — From any supported AI provider
+1. **Telegram Bot** — Create via [@BotFather](https://t.me/BotFather) to get the Bot Token
+2. **Telegram Chat ID** — Channel username (e.g. `@my_channel`) or group/user numeric ID
+3. **AI API Key** — From any supported AI provider
+4. **GitHub Token** (Optional) — [Create a Personal Access Token](https://github.com/settings/tokens) for higher API rate limits. Recommended if you subscribe to many repos or use frequent polling
 
-### Docker Compose (Recommended)
+### Option 1: GitHub Actions (Recommended)
+
+No server required. Fork and configure:
+
+1. Fork this repository
+2. Go to **Settings → Secrets and variables → Actions**
+3. Add **Secrets** (encrypted):
+   - `TELEGRAM_BOT_TOKEN` — Your Telegram Bot Token
+   - `TELEGRAM_CHAT_ID` — Target channel/group ID
+   - `AI_API_KEY` — AI service API Key
+4. Add **Variables** (plaintext):
+   - `SUBSCRIBE_REPOS` — Comma-separated repos, e.g. `vuejs/core,nodejs/node`
+5. Go to **Actions** tab → Enable workflows
+6. Optionally trigger **Release Check** manually to test
+
+> GitHub Actions provides a built-in `GITHUB_TOKEN` automatically (1000 req/hr). No need to configure it.
+>
+> Other optional variables: `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`, `TIMEZONE`, `TARGET_LANG`. See [Configuration](#configuration) for defaults.
+
+### Option 2: Docker Compose
 
 ```bash
 git clone https://github.com/nicepkg/github-subscribe-bot.git
@@ -34,9 +53,6 @@ cd github-subscribe-bot
 
 cp .env.example .env
 # Edit .env with your configuration (see below)
-
-cp subscribe.example.json subscribe.json
-# Edit subscribe.json with repos to subscribe (see below)
 
 docker compose up -d --build
 
@@ -53,15 +69,16 @@ All settings are configured via environment variables in the `.env` file:
 
 | Variable             | Required | Default              | Description                                   |
 | -------------------- | -------- | -------------------- | --------------------------------------------- |
-| `GITHUB_TOKEN`       | ❌       | —                    | GitHub Personal Access Token (optional, recommended for high-frequency polling) |
+| `SUBSCRIBE_REPOS`    | ✅       | —                    | Comma-separated repos to subscribe (e.g. `vuejs/core,nodejs/node`) |
 | `TELEGRAM_BOT_TOKEN` | ✅       | —                    | Telegram Bot Token                            |
 | `TELEGRAM_CHAT_ID`   | ✅       | —                    | Target channel/group/user ID                  |
+| `AI_API_KEY`         | ✅       | —                    | AI service API Key                            |
+| `AI_MODEL`           | ❌       | `gpt-4o-mini`        | Model name                                    |
 | `AI_PROVIDER`        | ❌       | `openai-completions` | AI provider (see below)                       |
 | `AI_BASE_URL`        | ❌       | SDK default          | Custom API URL (proxy/self-hosted)            |
-| `AI_API_KEY`         | ✅       | —                    | AI service API Key                            |
-| `AI_MODEL`           | ✅       | —                    | Model name                                    |
+| `GITHUB_TOKEN`       | ❌       | —                    | GitHub PAT for higher rate limits (5000 req/hr vs 60 req/hr) |
 | `TIMEZONE`           | ❌       | `Asia/Shanghai`      | IANA timezone for cron and message formatting |
-| `CRON`               | ✅       | —                    | Cron expression (6 fields, with seconds)      |
+| `CRON`               | ❌       | —                    | Cron expression (6 fields, with seconds). Required for Docker/local mode |
 | `TARGET_LANG`        | ❌       | `English`            | Target language for AI translation            |
 
 > `TARGET_LANG` controls both AI translation output and category labels (e.g. ✨ Features). Built-in label translations are available for `English`, `Chinese`, and `Japanese`. Other languages will use English labels with AI-translated content.
@@ -94,11 +111,12 @@ AI_MODEL=gpt-4o-mini
 TIMEZONE=Asia/Shanghai
 CRON=0 */10 9-23 * * *
 TARGET_LANG=English
+SUBSCRIBE_REPOS=vuejs/core,nodejs/node
 ```
 
 ### Scheduling (Cron)
 
-The program uses `CRON` for scheduling (via the `cron` package):
+In Docker/local mode, the program uses `CRON` for internal scheduling (via the `cron` package):
 
 ```env
 TIMEZONE=Asia/Shanghai
@@ -113,24 +131,18 @@ Examples:
 - Daily at 08:30: `0 30 8 * * *`
 
 > `CRON` uses 6-field format (second minute hour day month weekday), e.g. `0 */10 9-23 * * *`.
+> In GitHub Actions mode, scheduling is handled by the workflow cron trigger — `CRON` is not needed.
 
 ## Subscription
 
-Create your subscription config from the example:
+Set the `SUBSCRIBE_REPOS` environment variable with comma-separated GitHub repos (`owner/repo` format):
 
-```bash
-cp subscribe.example.json subscribe.json
+```env
+SUBSCRIBE_REPOS=vuejs/core,nodejs/node,microsoft/vscode
 ```
 
-Edit `subscribe.json` with GitHub repos to subscribe (`owner/repo` format):
-
-```json
-{
-  "repos": ["vuejs/core", "nodejs/node", "microsoft/vscode"]
-}
-```
-
-> `subscribe.json` is gitignored and won't be tracked. Modify freely.
+For GitHub Actions, set this as a **Variable** in repository settings.
+For Docker/local, add it to your `.env` file.
 
 Restart the container after changes:
 
@@ -165,11 +177,11 @@ AI automatically translates English release notes into the configured target lan
 ```bash
 npm install
 cp .env.example .env
-cp subscribe.example.json subscribe.json
-# Edit .env with your tokens
+# Edit .env with your tokens and SUBSCRIBE_REPOS
 
 npm run dev    # Dev mode (auto-restart on file changes)
-npm start      # Run directly
+npm start      # Run directly (daemon with internal cron)
+npm run check  # Run once and exit (used by GitHub Actions)
 npm run build  # Compile TypeScript
 ```
 
@@ -177,7 +189,8 @@ npm run build  # Compile TypeScript
 
 ```
 ├── src/
-│   ├── index.ts       # Entry point, scheduler
+│   ├── index.ts       # Entry point, daemon with internal cron
+│   ├── action.ts      # Single-run entry point (for GitHub Actions)
 │   ├── config.ts      # Environment config loader
 │   ├── types.ts       # Type definitions
 │   ├── github.ts      # GitHub API client & state management
@@ -185,7 +198,6 @@ npm run build  # Compile TypeScript
 │   ├── formatter.ts   # Telegram message formatting
 │   ├── telegram.ts    # Telegram message sender (with retry)
 │   └── logger.ts      # Logger utility
-├── subscribe.example.json
 ├── data/              # Runtime state (auto-generated)
 ├── Dockerfile
 ├── docker-compose.yml
