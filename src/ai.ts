@@ -21,7 +21,7 @@ const CategoryGroupSchema = z.object({
 });
 
 const ReleaseCategoriesSchema = z.object({
-  categories: z.array(CategoryGroupSchema).default([]),
+  categories: z.array(CategoryGroupSchema),
 });
 
 const RELEASE_OUTPUT_SCHEMA = zodSchema(ReleaseCategoriesSchema);
@@ -230,11 +230,10 @@ export async function categorizeRelease(
       system: buildSystemPrompt(targetLang),
       prompt: release.body,
       output: Output.object({ schema: RELEASE_OUTPUT_SCHEMA }),
-      temperature: 0,
     });
 
     const elapsed = Date.now() - start;
-    const validCategories = output.categories
+    const validCategories = (output.categories ?? [])
       .map(cat => ({
         type: cat.type,
         items: cat.items.filter(item => item.trim().length > 0)
