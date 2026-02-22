@@ -43,7 +43,9 @@ export interface TagCheckResult {
 
 export interface RepoState {
   lastRelease?: string;
+  lastReleaseDate?: string;
   lastTag?: string;
+  lastTagDate?: string;
   etag: string | null;
   lastCheck: string;
 }

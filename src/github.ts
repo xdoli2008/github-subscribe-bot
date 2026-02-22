@@ -98,11 +98,26 @@ export async function checkRepo(
   }
 
   const newReleases: GitHubRelease[] = [];
+  let sentinelFound = false;
   for (const r of published) {
-    if (r.tag_name === repoState.lastRelease) break;
+    if (r.tag_name === repoState.lastRelease) {
+      sentinelFound = true;
+      break;
+    }
     newReleases.push(r);
   }
 
+  // Sentinel missing (deleted release): filter by time
+  if (!sentinelFound && newReleases.length > 0) {
+    const cutoff = repoState.lastReleaseDate ?? repoState.lastCheck;
+    console.warn(
+      `[${repo}] Last release "${repoState.lastRelease}" not found in API response, using time cutoff: ${cutoff}`,
+    );
+    const filtered = newReleases.filter(
+      (r) => new Date(r.published_at) > new Date(cutoff),
+    );
+    return { repo, newReleases: filtered, etag };
+  }
   return { repo, newReleases, etag };
 }
 
@@ -151,11 +166,31 @@ export async function checkRepoTags(
   }
 
   const newTags: GitHubTag[] = [];
+  let sentinelFound = false;
   for (const t of tags) {
-    if (t.name === repoState.lastTag) break;
+    if (t.name === repoState.lastTag) {
+      sentinelFound = true;
+      break;
+    }
     newTags.push(t);
   }
 
+  // Sentinel missing (deleted tag): filter by commit date
+  if (!sentinelFound && newTags.length > 0) {
+    const cutoff = repoState.lastTagDate ?? repoState.lastCheck;
+    console.warn(
+      `[${repo}] Last tag "${repoState.lastTag}" not found in API response, using time cutoff: ${cutoff}`,
+    );
+    const cutoffTime = new Date(cutoff).getTime();
+    const filtered: GitHubTag[] = [];
+    for (const t of newTags) {
+      const dateStr = await getCommitDate(repo, t.commit.sha, token);
+      if (!dateStr) continue;
+      if (new Date(dateStr).getTime() <= cutoffTime) break;
+      filtered.push(t);
+    }
+    return { repo, newTags: filtered, etag };
+  }
   return { repo, newTags, etag };
 }
 
