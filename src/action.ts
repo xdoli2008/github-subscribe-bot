@@ -31,6 +31,7 @@ async function processReleaseRepo(
     if (result.etag && result.etag !== state[repo]?.etag) {
       state[repo] = {
         lastRelease: state[repo]?.lastRelease,
+        lastReleaseDate: state[repo]?.lastReleaseDate,
         etag: result.etag,
         lastCheck: now,
       };
@@ -65,6 +66,7 @@ async function processReleaseRepo(
 
   state[repo] = {
     lastRelease: result.newReleases[0].tag_name,
+    lastReleaseDate: result.newReleases[0].published_at,
     etag: result.etag,
     lastCheck: now,
   };
@@ -84,6 +86,7 @@ async function processTagRepo(
     if (result.etag && result.etag !== state[key]?.etag) {
       state[key] = {
         lastTag: state[key]?.lastTag,
+        lastTagDate: state[key]?.lastTagDate,
         etag: result.etag,
         lastCheck: now,
       };
@@ -144,8 +147,10 @@ async function processTagRepo(
     }
   }
 
+  const latestTagDate = await getCommitDate(repo, result.newTags[0].commit.sha, config.githubToken);
   state[key] = {
     lastTag: result.newTags[0].name,
+    lastTagDate: latestTagDate ?? now,
     etag: result.etag,
     lastCheck: now,
   };
