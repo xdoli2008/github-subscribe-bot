@@ -1,6 +1,6 @@
 name: Release Check
 
-于:
+on:
   schedule:
     - cron: '0 */8 * * *'
   workflow_dispatch:
