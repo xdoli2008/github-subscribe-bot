@@ -1,8 +1,8 @@
 name: Release Check
 
-on:
+于:
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 */8 * * *'
   workflow_dispatch:
 
 concurrency:
