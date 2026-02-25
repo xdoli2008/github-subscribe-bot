@@ -63,6 +63,7 @@ jobs:
       - name: Save state cache
         uses: actions/cache/save@v4
         if: always()
+        continue-on-error: true
         with:
           path: data/
           key: release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}
