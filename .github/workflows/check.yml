@@ -8,6 +8,9 @@ on:
 concurrency:
   group: release-check
   cancel-in-progress: false
+
+env:
+  CACHE_VERSION: v1
  
 jobs:
   check:
@@ -25,9 +28,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: data/
-          key: release-state-${{ github.ref }}-${{ github.run_id }}
+          key: release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}
           restore-keys: |
-            release-state-${{ github.ref }}-
+            release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}-
+ 
+      - name: Show state before run
+        run: |
+          echo "=== State before run (from cache) ==="
+          if [ -f data/state.json ]; then
+            cat data/state.json
+          else
+            echo "No state.json file exists"
+          fi
  
       - name: Run release check
         env:
@@ -43,17 +55,14 @@ jobs:
           SUBSCRIBE_REPOS: ${{ vars.SUBSCRIBE_REPOS }}
         run: npm run check
  
-      - name: Verify state after run
+      - name: Show state after run
         run: |
-          echo "=== State after check ==="
-          if [ -f data/state.json ]; then
-            echo "File exists, size: $(wc -c < data/state.json) bytes"
-            wc -l data/state.json
-          fi
+          echo "=== State after run (updated) ==="
+          cat data/state.json
  
       - name: Save state cache
         uses: actions/cache/save@v4
         if: always()
         with:
           path: data/
-          key: release-state-${{ github.ref }}-${{ github.run_id }}
+          key: release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}
