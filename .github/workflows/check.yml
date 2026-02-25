@@ -2,7 +2,7 @@ name: Release Check
 
 on:
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 # 防止多个实例同时运行（但允许快速取消旧的）
