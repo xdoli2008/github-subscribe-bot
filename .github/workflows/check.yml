@@ -1,37 +1,40 @@
 name: Release Check
- 
+
 on:
   schedule:
     - cron: '0 */4 * * *'
   workflow_dispatch:
- 
+
+# 防止多个实例同时运行（但允许快速取消旧的）
 concurrency:
   group: release-check
   cancel-in-progress: true
 
 env:
-  CACHE_VERSION: v1
- 
+  CACHE_VERSION: v2   # ← 升级到 v2，自动清理旧的固定 key 缓存
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
- 
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
- 
+
       - run: npm ci
- 
+
+      # ==================== 缓存恢复（推荐写法） ====================
       - name: Restore state cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: data/
-          key: release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}
+          key: release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}-${{ github.run_id }}
           restore-keys: |
             release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}-
- 
+
+      # ==================== 显示缓存里的旧状态 ====================
       - name: Show state before run
         run: |
           echo "=== State before run (from cache) ==="
@@ -40,7 +43,8 @@ jobs:
           else
             echo "No state.json file exists"
           fi
- 
+
+      # ==================== 执行主程序 ====================
       - name: Run release check
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -54,16 +58,18 @@ jobs:
           TARGET_LANG: ${{ vars.TARGET_LANG || 'Chinese' }}
           SUBSCRIBE_REPOS: ${{ vars.SUBSCRIBE_REPOS }}
         run: npm run check
- 
+
+      # ==================== 显示更新后的状态 ====================
       - name: Show state after run
         run: |
           echo "=== State after run (updated) ==="
           cat data/state.json
- 
+
+      # ==================== 保存新缓存（关键修复） ====================
       - name: Save state cache
         uses: actions/cache/save@v4
         if: always()
         continue-on-error: true
         with:
           path: data/
-          key: release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}
+          key: release-state-${{ github.ref }}-${{ env.CACHE_VERSION }}-${{ github.run_id }}
