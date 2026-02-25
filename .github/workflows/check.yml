@@ -7,7 +7,7 @@ on:
  
 concurrency:
   group: release-check
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   CACHE_VERSION: v1
