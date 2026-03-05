@@ -151,19 +151,22 @@ Each repo can optionally specify a subscription mode with a `:mode` suffix:
 
 | Format | Mode | Description |
 |--------|------|-------------|
-| `owner/repo` | `release` | Subscribe to GitHub Releases (default) |
-| `owner/repo:release` | `release` | Explicitly subscribe to Releases |
+| `owner/repo` | `latest` | Subscribe to stable releases only (default, excludes prereleases) |
+| `owner/repo:latest` | `latest` | Explicitly subscribe to stable releases only |
+| `owner/repo:pre` | `pre` | Subscribe to prereleases only |
 | `owner/repo:tag` | `tag` | Subscribe to new Git tags (for repos without Releases) |
 
 Example:
 
 ```env
-SUBSCRIBE_REPOS=vuejs/core,some-org/lib:tag,another/tool:release
+SUBSCRIBE_REPOS=vuejs/core,some-org/lib:pre,another/tool:tag
 ```
 
-- `vuejs/core` — monitors Releases (default)
-- `some-org/lib:tag` — monitors new Git tags, generates changelog from commits between tags
-- `another/tool:release` — explicitly monitors Releases
+- `vuejs/core` — monitors stable releases (default, same as `:latest`)
+- `some-org/lib:pre` — monitors prereleases only
+- `another/tool:tag` — monitors new Git tags, generates changelog from commits between tags
+
+> Backward compatibility: `:release` is still accepted and mapped to `:latest`.
 
 In **tag mode**, the bot fetches commits between the previous and new tag (up to 50), feeds them to AI for categorization, and sends the result in the same format as release notifications.
 

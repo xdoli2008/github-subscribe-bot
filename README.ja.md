@@ -150,19 +150,22 @@ SUBSCRIBE_REPOS=vuejs/core,nodejs/node,microsoft/vscode
 
 | 形式 | モード | 説明 |
 |------|--------|------|
-| `owner/repo` | `release` | GitHub Release を購読（デフォルト） |
-| `owner/repo:release` | `release` | Release を明示的に購読 |
+| `owner/repo` | `latest` | 安定版 Release のみ購読（デフォルト、prerelease 除外） |
+| `owner/repo:latest` | `latest` | 安定版 Release のみを明示的に購読 |
+| `owner/repo:pre` | `pre` | prerelease のみ購読 |
 | `owner/repo:tag` | `tag` | 新しい Git Tag を購読（Release のないリポジトリ向け） |
 
 例：
 
 ```env
-SUBSCRIBE_REPOS=vuejs/core,some-org/lib:tag,another/tool:release
+SUBSCRIBE_REPOS=vuejs/core,some-org/lib:pre,another/tool:tag
 ```
 
-- `vuejs/core` — Release を監視（デフォルト）
-- `some-org/lib:tag` — 新しい Git Tag を監視し、Tag 間のコミットから変更履歴を生成
-- `another/tool:release` — Release を明示的に監視
+- `vuejs/core` — 安定版 Release を監視（デフォルト、`:latest` と同等）
+- `some-org/lib:pre` — prerelease のみ監視
+- `another/tool:tag` — 新しい Git Tag を監視し、Tag 間のコミットから変更履歴を生成
+
+> 後方互換性: `:release` も引き続き受け付けますが、`:latest` にマッピングされます。
 
 **Tag モード**では、Bot は前後の Tag 間のコミット（最大 50 件）を取得し、AI で分類・翻訳して Release 通知と同じ形式で配信します。
 

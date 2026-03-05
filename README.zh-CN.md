@@ -150,19 +150,22 @@ SUBSCRIBE_REPOS=vuejs/core,nodejs/node,microsoft/vscode
 
 | 格式 | 模式 | 说明 |
 |------|------|------|
-| `owner/repo` | `release` | 订阅 GitHub Release（默认） |
-| `owner/repo:release` | `release` | 显式订阅 Release |
+| `owner/repo` | `latest` | 仅订阅正式版 Release（默认，不含预发布） |
+| `owner/repo:latest` | `latest` | 显式仅订阅正式版 Release |
+| `owner/repo:pre` | `pre` | 仅订阅预发布版本 |
 | `owner/repo:tag` | `tag` | 订阅新 Git Tag（适用于没有 Release 的项目） |
 
 示例：
 
 ```env
-SUBSCRIBE_REPOS=vuejs/core,some-org/lib:tag,another/tool:release
+SUBSCRIBE_REPOS=vuejs/core,some-org/lib:pre,another/tool:tag
 ```
 
-- `vuejs/core` — 监听 Release（默认）
-- `some-org/lib:tag` — 监听新 Git Tag，根据两个 Tag 之间的 commits 生成更新日志
-- `another/tool:release` — 显式监听 Release
+- `vuejs/core` — 仅监听正式版 Release（默认，等同于 `:latest`）
+- `some-org/lib:pre` — 仅监听预发布版本
+- `another/tool:tag` — 监听新 Git Tag，根据两个 Tag 之间的 commits 生成更新日志
+
+> 兼容说明：`:release` 仍可使用，但会映射为 `:latest`。
 
 **Tag 模式**下，Bot 会获取前后两个 Tag 之间的 commits（最多 50 条），交给 AI 分类翻译，推送格式与 Release 通知一致。
 
