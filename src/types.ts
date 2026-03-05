@@ -1,4 +1,6 @@
-export type SubscribeMode = 'release' | 'tag';
+export type SubscribeMode = 'latest' | 'pre' | 'tag';
+
+export type ReleaseSubscribeMode = Exclude<SubscribeMode, 'tag'>;
 
 export interface Subscription {
   repo: string;
