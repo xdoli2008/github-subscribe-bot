@@ -52,13 +52,13 @@ export function loadConfig(): AppConfig {
   };
 }
 
-const VALID_MODES = new Set<SubscribeMode>(['release', 'tag']);
+const VALID_MODES = new Set<SubscribeMode>(['latest', 'pre', 'tag']);
 
 export function loadSubscriptions(): Subscription[] {
   const envRepos = process.env.SUBSCRIBE_REPOS;
   if (!envRepos) {
     throw new Error(
-      'Missing required env: SUBSCRIBE_REPOS. Set comma-separated repos, e.g. SUBSCRIBE_REPOS=vuejs/core,some/repo:tag',
+      'Missing required env: SUBSCRIBE_REPOS. Set comma-separated repos, e.g. SUBSCRIBE_REPOS=vuejs/core,some/repo:latest,some/repo:pre,some/repo:tag',
     );
   }
 
@@ -71,10 +71,10 @@ export function loadSubscriptions(): Subscription[] {
     throw new Error('SUBSCRIBE_REPOS is empty. Add at least one repo.');
   }
 
-  return entries.map((entry) => {
+  const parsed = entries.map((entry) => {
     const colonIdx = entry.lastIndexOf(':');
     if (colonIdx === -1) {
-      return { repo: entry, mode: 'release' as SubscribeMode };
+      return { repo: entry, mode: 'latest' as SubscribeMode };
     }
 
     const maybeSuffix = entry.slice(colonIdx + 1);
@@ -85,7 +85,32 @@ export function loadSubscriptions(): Subscription[] {
       };
     }
 
+    if (maybeSuffix === 'release') {
+      console.warn(
+        `[Config] Deprecated mode suffix ":release" in "${entry}". Mapped to ":latest".`,
+      );
+      return {
+        repo: entry.slice(0, colonIdx),
+        mode: 'latest' as SubscribeMode,
+      };
+    }
+
     // Not a valid mode suffix, treat entire string as repo name
-    return { repo: entry, mode: 'release' as SubscribeMode };
+    return { repo: entry, mode: 'latest' as SubscribeMode };
   });
+
+  const deduped: Subscription[] = [];
+  const seen = new Set<string>();
+
+  for (const sub of parsed) {
+    const key = sub.mode === 'latest' ? sub.repo : `${sub.repo}:${sub.mode}`;
+    if (seen.has(key)) {
+      console.warn(`[Config] Duplicate subscription "${key}" ignored.`);
+      continue;
+    }
+    seen.add(key);
+    deduped.push(sub);
+  }
+
+  return deduped;
 }
